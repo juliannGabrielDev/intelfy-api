@@ -1,0 +1,27 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: intelfy_db
+    restart: no
+    environment:
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-pass123}
+      - POSTGRES_DB=${DB_NAME:-intelfy_db}
+    ports:
+      - "5445:5432"
+    volumes:
+      # Persistencia de datos
+      - postgres_data:/var/lib/postgresql/data
+      # AUTOMATIZACIÓN: Montamos tu carpeta local db/ en la carpeta de inicio de Postgres
+      # Postgres ejecuta los archivos en orden alfabético (schema.sql antes que seeds.sql)
+      - ./db:/docker-entrypoint-initdb.d
+    networks:
+      - intelfy_network
+
+# Definición de volúmenes y redes
+volumes:
+  postgres_data:
+
+networks:
+  intelfy_network:
+    driver: bridge

@@ -1,0 +1,20 @@
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Build / test outputs
+bin/
+*.exe
+*.test
+*.out
+coverage.out
+*.coverprofile
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+uploads/**
+!uploads/**/
+!uploads/**/.gitkeep

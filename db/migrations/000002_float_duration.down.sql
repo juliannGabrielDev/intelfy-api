@@ -1,0 +1,1 @@
+ALTER TABLE songs ALTER COLUMN duration_ms TYPE INTEGER;
