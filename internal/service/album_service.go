@@ -5,6 +5,8 @@ import (
 	"errors"
 	"math"
 
+	"fmt"
+
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/juliannGabrielDev/intelfy-api/internal/dto"
 	"github.com/juliannGabrielDev/intelfy-api/internal/repository"
@@ -12,14 +14,25 @@ import (
 )
 
 type AlbumService struct {
-	repo *repository.Queries
+	repo                *repository.Queries
+	appURL              string
+	uploadDir           string
+	notificationService *NotificationService
 }
 
-func NewAlbumService(repo *repository.Queries) *AlbumService {
-	return &AlbumService{repo: repo}
+func NewAlbumService(repo *repository.Queries, appURL, uploadDir string) *AlbumService {
+	return &AlbumService{
+		repo:      repo,
+		appURL:    appURL,
+		uploadDir: uploadDir,
+	}
 }
 
-func (s *AlbumService) CreateAlbum(ctx context.Context, req dto.CreateAlbumRequest) (dto.AlbumResponse, error) {
+func (s *AlbumService) SetNotificationService(ns *NotificationService) {
+	s.notificationService = ns
+}
+
+func (s *AlbumService) CreateAlbum(ctx context.Context, req dto.CreateAlbumRequest, coverPath string) (dto.AlbumResponse, error) {
 	newID, err := nanoid.GenerateID()
 	if err != nil {
 		return dto.AlbumResponse{}, err
@@ -33,8 +46,8 @@ func (s *AlbumService) CreateAlbum(ctx context.Context, req dto.CreateAlbumReque
 			Valid:  req.Description != "",
 		},
 		CoverUrl: pgtype.Text{
-			String: req.CoverURL,
-			Valid:  req.CoverURL != "",
+			String: coverPath,
+			Valid:  coverPath != "",
 		},
 		ArtistID: req.ArtistID,
 		ReleaseDate: pgtype.Date{
@@ -45,6 +58,15 @@ func (s *AlbumService) CreateAlbum(ctx context.Context, req dto.CreateAlbumReque
 
 	if err != nil {
 		return dto.AlbumResponse{}, err
+	}
+
+	// Trigger notification
+	if s.notificationService != nil {
+		go func() {
+			title := "New Album Released!"
+			message := fmt.Sprintf("Artist has released a new album: %s", album.Name)
+			s.notificationService.NotifyFollowers(context.Background(), album.ArtistID, title, message)
+		}()
 	}
 
 	return s.mapToAlbumResponse(album), nil
@@ -111,7 +133,7 @@ func (s *AlbumService) GetAlbumByID(ctx context.Context, id string) (dto.AlbumRe
 	return s.mapToAlbumResponse(album), nil
 }
 
-func (s *AlbumService) UpdateAlbumByID(ctx context.Context, id string, req dto.UpdateAlbumRequest) error {
+func (s *AlbumService) UpdateAlbumByID(ctx context.Context, id string, req dto.UpdateAlbumRequest, coverPath *string) error {
 	if req.Name != nil && *req.Name == "" {
 		return errors.New("album name cannot be empty")
 	}
@@ -132,7 +154,7 @@ func (s *AlbumService) UpdateAlbumByID(ctx context.Context, id string, req dto.U
 		ID:          id,
 		Name:        req.Name,
 		Description: req.Description,
-		CoverUrl:    req.CoverURL,
+		CoverUrl:    coverPath,
 		ArtistID:    req.ArtistID,
 		ReleaseDate: releaseDate,
 	})
@@ -143,11 +165,16 @@ func (s *AlbumService) DeleteAlbumByID(ctx context.Context, id string) error {
 }
 
 func (s *AlbumService) mapToAlbumResponse(album repository.Album) dto.AlbumResponse {
+	coverURL := album.CoverUrl.String
+	if coverURL != "" {
+		coverURL = s.appURL + "/" + s.uploadDir + "/" + coverURL
+	}
+
 	return dto.AlbumResponse{
 		ID:          album.ID,
 		Name:        album.Name,
 		Description: album.Description.String,
-		CoverURL:    album.CoverUrl.String,
+		CoverURL:    coverURL,
 		ArtistID:    album.ArtistID,
 		ReleaseDate: album.ReleaseDate.Time,
 	}

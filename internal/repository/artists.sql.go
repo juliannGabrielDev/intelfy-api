@@ -28,7 +28,7 @@ INSERT INTO artists (
 ) VALUES (
 	$1, $2, $3, $4
 )
-RETURNING id, name, bio, cover_url
+RETURNING id, name, bio, cover_url, created_at
 `
 
 type CreateArtistParams struct {
@@ -38,26 +38,20 @@ type CreateArtistParams struct {
 	CoverUrl pgtype.Text
 }
 
-type CreateArtistRow struct {
-	ID       string
-	Name     string
-	Bio      pgtype.Text
-	CoverUrl pgtype.Text
-}
-
-func (q *Queries) CreateArtist(ctx context.Context, arg CreateArtistParams) (CreateArtistRow, error) {
+func (q *Queries) CreateArtist(ctx context.Context, arg CreateArtistParams) (Artist, error) {
 	row := q.db.QueryRow(ctx, createArtist,
 		arg.ID,
 		arg.Name,
 		arg.Bio,
 		arg.CoverUrl,
 	)
-	var i CreateArtistRow
+	var i Artist
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Bio,
 		&i.CoverUrl,
+		&i.CreatedAt,
 	)
 	return i, err
 }

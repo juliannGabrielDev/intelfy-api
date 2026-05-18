@@ -10,6 +10,7 @@ import (
 
 type CustomClaims struct {
 	UserID string `json:"user_id"`
+	Role   string `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -22,9 +23,10 @@ func getSecretKey() []byte {
 	return []byte(secret)
 }
 
-func GenerateToken(userID string) (string, error) {
+func GenerateToken(userID string, role string) (string, error) {
 	claims := CustomClaims{
 		UserID: userID,
+		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(72 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -32,22 +34,22 @@ func GenerateToken(userID string) (string, error) {
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(getSecretKey())
 }
 
-func ValidateToken(tokenString string) (string, error) {
+func ValidateToken(tokenString string) (string, string, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return getSecretKey(), nil
 	})
 
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	if claims, ok := token.Claims.(*CustomClaims); ok && token.Valid {
-		return claims.UserID, nil
+		return claims.UserID, claims.Role, nil
 	}
 
-	return "", errors.New("invalid token")
+	return "", "", errors.New("invalid token")
 }

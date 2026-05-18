@@ -3,7 +3,6 @@ package dto
 type CreateSongRequest struct {
 	Name     string       `json:"name"`
 	Duration SongDuration `json:"duration"`
-	AudioURL string       `json:"audio_url"`
 	AlbumID  string       `json:"album_id"`
 	GenreID  string       `json:"genre_id,omitempty"`
 }
@@ -11,7 +10,6 @@ type CreateSongRequest struct {
 type UpdateSongRequest struct {
 	Name     *string       `json:"name"`
 	Duration *SongDuration `json:"duration"`
-	AudioURL *string       `json:"audio_url"`
 	AlbumID  *string       `json:"album_id"`
 	GenreID  *string       `json:"genre_id,omitempty"`
 }
@@ -21,6 +19,7 @@ type SongResponse struct {
 	Name     string       `json:"name"`
 	Duration SongDuration `json:"duration"`
 	AudioURL string       `json:"audio_url"`
+	CoverURL string       `json:"cover_url"`
 	AlbumID  string       `json:"album_id"`
 	GenreID  string       `json:"genre_id,omitempty"`
 }

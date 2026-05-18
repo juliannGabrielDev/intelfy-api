@@ -35,6 +35,7 @@ CREATE TABLE songs (
     name VARCHAR(255) NOT NULL,
     duration_seconds FLOAT NOT NULL,
     audio_url VARCHAR(500) NOT NULL,
+    cover_url VARCHAR(500),
     album_id VARCHAR(21) NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
     genre_id VARCHAR(21) REFERENCES genres(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -54,3 +55,20 @@ CREATE TABLE playlist_songs (
     added_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (playlist_id, song_id)
 );
+
+CREATE TABLE follows (
+    follower_id VARCHAR(21) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    artist_id VARCHAR(21) NOT NULL REFERENCES artists(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (follower_id, artist_id)
+);
+
+CREATE TABLE notifications (
+    id VARCHAR(21) PRIMARY KEY,
+    user_id VARCHAR(21) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+

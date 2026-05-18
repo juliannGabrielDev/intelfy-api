@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"time"
 
@@ -13,14 +14,21 @@ import (
 )
 
 type SongService struct {
-	repo *repository.Queries
+	repo                *repository.Queries
+	appURL              string
+	uploadDir           string
+	notificationService *NotificationService
 }
 
-func NewSongService(repo *repository.Queries) *SongService {
-	return &SongService{repo: repo}
+func NewSongService(repo *repository.Queries, appURL, uploadDir string) *SongService {
+	return &SongService{
+		repo:      repo,
+		appURL:    appURL,
+		uploadDir: uploadDir,
+	}
 }
 
-func (s *SongService) CreateSong(ctx context.Context, req dto.CreateSongRequest) (dto.SongResponse, error) {
+func (s *SongService) CreateSong(ctx context.Context, req dto.CreateSongRequest, audioPath, coverPath string) (dto.SongResponse, error) {
 	newID, err := nanoid.GenerateID()
 	if err != nil {
 		return dto.SongResponse{}, err
@@ -30,8 +38,12 @@ func (s *SongService) CreateSong(ctx context.Context, req dto.CreateSongRequest)
 		ID:              newID,
 		Name:            req.Name,
 		DurationSeconds: req.Duration.Seconds(),
-		AudioUrl:        req.AudioURL,
-		AlbumID:         req.AlbumID,
+		AudioUrl:        audioPath,
+		CoverUrl: pgtype.Text{
+			String: coverPath,
+			Valid:  coverPath != "",
+		},
+		AlbumID: req.AlbumID,
 		GenreID: pgtype.Text{
 			String: req.GenreID,
 			Valid:  req.GenreID != "",
@@ -40,6 +52,19 @@ func (s *SongService) CreateSong(ctx context.Context, req dto.CreateSongRequest)
 
 	if err != nil {
 		return dto.SongResponse{}, err
+	}
+
+	// Trigger notification
+	if s.notificationService != nil {
+		go func() {
+			title := "New Song Released!"
+			message := fmt.Sprintf("Artist has uploaded a new song: %s", song.Name)
+			// We need the artist_id, but the song row only has album_id.
+			// Let's assume we can get it from the request if we add it, or just use the album's artist.
+			// For simplicity, I'll fetch the artist from the album.
+			album, _ := s.repo.GetAlbumByID(context.Background(), song.AlbumID)
+			s.notificationService.NotifyFollowers(context.Background(), album.ArtistID, title, message)
+		}()
 	}
 
 	return s.mapToSongResponse(song), nil
@@ -116,7 +141,7 @@ func (s *SongService) GetSongByID(ctx context.Context, id string) (dto.SongRespo
 	return s.mapToSongResponse(song), nil
 }
 
-func (s *SongService) UpdateSongByID(ctx context.Context, id string, req dto.UpdateSongRequest) error {
+func (s *SongService) UpdateSongByID(ctx context.Context, id string, req dto.UpdateSongRequest, audioPath, coverPath *string) error {
 	// Verify song exists
 	_, err := s.repo.GetSongByID(ctx, id)
 	if err != nil {
@@ -131,10 +156,6 @@ func (s *SongService) UpdateSongByID(ctx context.Context, id string, req dto.Upd
 		return errors.New("duration must be greater than zero")
 	}
 
-	if req.AudioURL != nil && *req.AudioURL == "" {
-		return errors.New("audio url cannot be empty")
-	}
-
 	if req.AlbumID != nil && *req.AlbumID == "" {
 		return errors.New("album id cannot be empty")
 	}
@@ -143,7 +164,8 @@ func (s *SongService) UpdateSongByID(ctx context.Context, id string, req dto.Upd
 		ID:              id,
 		Name:            req.Name,
 		DurationSeconds: durationPointerToSeconds(req.Duration),
-		AudioUrl:        req.AudioURL,
+		AudioUrl:        audioPath,
+		CoverUrl:        coverPath,
 		AlbumID:         req.AlbumID,
 		GenreID:         req.GenreID,
 	})
@@ -160,11 +182,22 @@ func (s *SongService) DeleteSongByID(ctx context.Context, id string) error {
 }
 
 func (s *SongService) mapToSongResponse(song repository.Song) dto.SongResponse {
+	audioURL := song.AudioUrl
+	if audioURL != "" {
+		audioURL = s.appURL + "/" + s.uploadDir + "/" + audioURL
+	}
+
+	coverURL := song.CoverUrl.String
+	if coverURL != "" {
+		coverURL = s.appURL + "/" + s.uploadDir + "/" + coverURL
+	}
+
 	return dto.SongResponse{
 		ID:       song.ID,
 		Name:     song.Name,
 		Duration: dto.SongDuration{Duration: time.Duration(song.DurationSeconds * float64(time.Second))},
-		AudioURL: song.AudioUrl,
+		AudioURL: audioURL,
+		CoverURL: coverURL,
 		AlbumID:  song.AlbumID,
 		GenreID:  song.GenreID.String,
 	}

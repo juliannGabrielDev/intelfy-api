@@ -174,7 +174,7 @@ func (q *Queries) GetPlaylistsByUser(ctx context.Context, arg GetPlaylistsByUser
 }
 
 const getSongsByPlaylistID = `-- name: GetSongsByPlaylistID :many
-SELECT s.id, s.name, s.duration_seconds, s.audio_url, s.album_id, s.genre_id, s.created_at FROM songs s
+SELECT s.id, s.name, s.duration_seconds, s.audio_url, s.cover_url, s.album_id, s.genre_id, s.created_at FROM songs s
 JOIN playlist_songs ps ON s.id = ps.song_id
 WHERE ps.playlist_id = $1
 ORDER BY ps.added_at DESC
@@ -194,6 +194,7 @@ func (q *Queries) GetSongsByPlaylistID(ctx context.Context, playlistID string) (
 			&i.Name,
 			&i.DurationSeconds,
 			&i.AudioUrl,
+			&i.CoverUrl,
 			&i.AlbumID,
 			&i.GenreID,
 			&i.CreatedAt,

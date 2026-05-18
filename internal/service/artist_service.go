@@ -11,11 +11,17 @@ import (
 )
 
 type ArtistService struct {
-	repo *repository.Queries
+	repo      *repository.Queries
+	appURL    string
+	uploadDir string
 }
 
-func NewArtistService(repo *repository.Queries) *ArtistService {
-	return &ArtistService{repo: repo}
+func NewArtistService(repo *repository.Queries, appURL, uploadDir string) *ArtistService {
+	return &ArtistService{
+		repo:      repo,
+		appURL:    appURL,
+		uploadDir: uploadDir,
+	}
 }
 
 func (s *ArtistService) CreateArtist(ctx context.Context, req dto.CreateArtistRequest) (dto.ArtistResponse, error) {
@@ -39,12 +45,21 @@ func (s *ArtistService) CreateArtist(ctx context.Context, req dto.CreateArtistRe
 		return dto.ArtistResponse{}, err
 	}
 
+	return s.mapToArtistResponse(artist), nil
+}
+
+func (s *ArtistService) mapToArtistResponse(artist repository.Artist) dto.ArtistResponse {
+	coverURL := artist.CoverUrl.String
+	if coverURL != "" {
+		coverURL = s.appURL + "/" + s.uploadDir + "/" + coverURL
+	}
+
 	return dto.ArtistResponse{
 		ID:       artist.ID,
 		Name:     artist.Name,
 		Bio:      artist.Bio.String,
-		CoverURL: artist.CoverUrl.String,
-	}, nil
+		CoverURL: coverURL,
+	}
 }
 
 func (s *ArtistService) GetArtists(ctx context.Context, pagination dto.GenericPagination) (*dto.PaginatedResponse[dto.ArtistResponse], error) {
@@ -79,12 +94,7 @@ func (s *ArtistService) GetArtists(ctx context.Context, pagination dto.GenericPa
 
 	resData := make([]dto.ArtistResponse, len(artists))
 	for i, artist := range artists {
-		resData[i] = dto.ArtistResponse{
-			ID:       artist.ID,
-			Name:     artist.Name,
-			Bio:      artist.Bio.String,
-			CoverURL: artist.CoverUrl.String,
-		}
+		resData[i] = s.mapToArtistResponse(artist)
 	}
 
 	totalPages := int(math.Ceil(float64(total) / float64(pagination.Limit)))
@@ -107,12 +117,7 @@ func (s *ArtistService) GetArtistByID(ctx context.Context, id string) (dto.Artis
 		return dto.ArtistResponse{}, err
 	}
 
-	return dto.ArtistResponse{
-		ID:       artist.ID,
-		Name:     artist.Name,
-		Bio:      artist.Bio.String,
-		CoverURL: artist.CoverUrl.String,
-	}, nil
+	return s.mapToArtistResponse(artist), nil
 }
 
 func (s *ArtistService) UpdateArtistByID(ctx context.Context, id string, req dto.UpdateArtistRequest) (dto.ArtistResponse, error) {

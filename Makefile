@@ -29,3 +29,12 @@ migrate-version:
 
 sqlc-generate:
 	sqlc generate
+
+run:
+	go run cmd/api/main.go
+
+tidy:
+	go mod tidy
+
+db-seed:
+	docker exec -i $(DB_CONTAINER) psql -U postgres -d intelfy_db < db/seeds.sql

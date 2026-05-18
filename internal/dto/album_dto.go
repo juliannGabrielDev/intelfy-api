@@ -5,7 +5,6 @@ import "time"
 type CreateAlbumRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
-	CoverURL    string `json:"cover_url,omitempty"`
 	ArtistID    string `json:"artist_id"`
 	ReleaseDate Date   `json:"release_date"`
 }
@@ -13,7 +12,6 @@ type CreateAlbumRequest struct {
 type UpdateAlbumRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description,omitempty"`
-	CoverURL    *string `json:"cover_url,omitempty"`
 	ArtistID    *string `json:"artist_id"`
 	ReleaseDate *Date   `json:"release_date"`
 }

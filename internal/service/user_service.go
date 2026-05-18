@@ -41,7 +41,7 @@ func (s *UserService) Register(ctx context.Context, req dto.RegisterRequest) (dt
 	if err != nil {
 		return dto.AuthResponse{}, err
 	}
-	accessToken, err := token.GenerateToken(user.ID)
+	accessToken, err := token.GenerateToken(user.ID, user.Role.String)
 	if err != nil {
 		return dto.AuthResponse{}, err
 	}
@@ -69,7 +69,7 @@ func (s *UserService) Login(ctx context.Context, req dto.LoginRequest) (dto.Auth
 		return dto.AuthResponse{}, errors.New("invalid credentials")
 	}
 
-	accessToken, err := token.GenerateToken(user.ID)
+	accessToken, err := token.GenerateToken(user.ID, user.Role.String)
 	if err != nil {
 		return dto.AuthResponse{}, err
 	}

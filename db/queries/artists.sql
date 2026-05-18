@@ -4,7 +4,7 @@ INSERT INTO artists (
 ) VALUES (
 	$1, $2, $3, $4
 )
-RETURNING id, name, bio, cover_url;
+RETURNING *;
 
 -- name: GetArtists :many
 SELECT * FROM artists

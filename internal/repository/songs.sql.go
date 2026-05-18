@@ -34,11 +34,11 @@ func (q *Queries) CountSongs(ctx context.Context, arg CountSongsParams) (int64, 
 
 const createSong = `-- name: CreateSong :one
 INSERT INTO songs (
-  id, name, duration_seconds, audio_url, album_id, genre_id
+  id, name, duration_seconds, audio_url, cover_url, album_id, genre_id
 ) VALUES (
-	$1, $2, $3, $4, $5, $6
+	$1, $2, $3, $4, $5, $6, $7
 )
-RETURNING id, name, duration_seconds, audio_url, album_id, genre_id, created_at
+RETURNING id, name, duration_seconds, audio_url, cover_url, album_id, genre_id, created_at
 `
 
 type CreateSongParams struct {
@@ -46,6 +46,7 @@ type CreateSongParams struct {
 	Name            string
 	DurationSeconds float64
 	AudioUrl        string
+	CoverUrl        pgtype.Text
 	AlbumID         string
 	GenreID         pgtype.Text
 }
@@ -56,6 +57,7 @@ func (q *Queries) CreateSong(ctx context.Context, arg CreateSongParams) (Song, e
 		arg.Name,
 		arg.DurationSeconds,
 		arg.AudioUrl,
+		arg.CoverUrl,
 		arg.AlbumID,
 		arg.GenreID,
 	)
@@ -65,6 +67,7 @@ func (q *Queries) CreateSong(ctx context.Context, arg CreateSongParams) (Song, e
 		&i.Name,
 		&i.DurationSeconds,
 		&i.AudioUrl,
+		&i.CoverUrl,
 		&i.AlbumID,
 		&i.GenreID,
 		&i.CreatedAt,
@@ -83,7 +86,7 @@ func (q *Queries) DeleteSongByID(ctx context.Context, id string) error {
 }
 
 const getSongByID = `-- name: GetSongByID :one
-SELECT id, name, duration_seconds, audio_url, album_id, genre_id, created_at FROM songs
+SELECT id, name, duration_seconds, audio_url, cover_url, album_id, genre_id, created_at FROM songs
 WHERE id = $1 LIMIT 1
 `
 
@@ -95,6 +98,7 @@ func (q *Queries) GetSongByID(ctx context.Context, id string) (Song, error) {
 		&i.Name,
 		&i.DurationSeconds,
 		&i.AudioUrl,
+		&i.CoverUrl,
 		&i.AlbumID,
 		&i.GenreID,
 		&i.CreatedAt,
@@ -103,7 +107,7 @@ func (q *Queries) GetSongByID(ctx context.Context, id string) (Song, error) {
 }
 
 const getSongs = `-- name: GetSongs :many
-SELECT s.id, s.name, s.duration_seconds, s.audio_url, s.album_id, s.genre_id, s.created_at FROM songs s
+SELECT s.id, s.name, s.duration_seconds, s.audio_url, s.cover_url, s.album_id, s.genre_id, s.created_at FROM songs s
 JOIN albums a ON s.album_id = a.id
 WHERE (s.album_id = $1 OR $1 = '')
   AND (a.artist_id = $2 OR $2 = '')
@@ -140,6 +144,7 @@ func (q *Queries) GetSongs(ctx context.Context, arg GetSongsParams) ([]Song, err
 			&i.Name,
 			&i.DurationSeconds,
 			&i.AudioUrl,
+			&i.CoverUrl,
 			&i.AlbumID,
 			&i.GenreID,
 			&i.CreatedAt,
@@ -160,15 +165,17 @@ SET
   name = COALESCE(NULLIF($1, ''), name),
   duration_seconds = CASE WHEN $2 > 0 THEN $2 ELSE duration_seconds END,
   audio_url = COALESCE(NULLIF($3, ''), audio_url),
-  album_id = COALESCE(NULLIF($4, ''), album_id),
-  genre_id = COALESCE(NULLIF($5, ''), genre_id)
-WHERE id = $6
+  cover_url = COALESCE(NULLIF($4, ''), cover_url),
+  album_id = COALESCE(NULLIF($5, ''), album_id),
+  genre_id = COALESCE(NULLIF($6, ''), genre_id)
+WHERE id = $7
 `
 
 type UpdateSongByIDParams struct {
 	Name            interface{}
 	DurationSeconds interface{}
 	AudioUrl        interface{}
+	CoverUrl        interface{}
 	AlbumID         interface{}
 	GenreID         interface{}
 	ID              string
@@ -179,6 +186,7 @@ func (q *Queries) UpdateSongByID(ctx context.Context, arg UpdateSongByIDParams) 
 		arg.Name,
 		arg.DurationSeconds,
 		arg.AudioUrl,
+		arg.CoverUrl,
 		arg.AlbumID,
 		arg.GenreID,
 		arg.ID,

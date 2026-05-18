@@ -11,6 +11,7 @@ import (
 	"github.com/juliannGabrielDev/intelfy-api/internal/handler"
 	"github.com/juliannGabrielDev/intelfy-api/internal/repository"
 	"github.com/juliannGabrielDev/intelfy-api/internal/service"
+	"github.com/juliannGabrielDev/intelfy-api/internal/ws"
 )
 
 func main() {
@@ -42,14 +43,26 @@ func main() {
 	queries := repository.New(dbPool)
 
 	// 5. Initialize Services
-	songService := service.NewSongService(queries)
+	appURL := os.Getenv("APP_URL")
+	uploadDir := os.Getenv("UPLOAD_DIR")
+	if uploadDir == "" {
+		uploadDir = "uploads"
+	}
+	songService := service.NewSongService(queries, appURL, uploadDir)
 	userService := service.NewUserService(queries)
 	playlistService := service.NewPlaylistService(queries)
 	genreService := service.NewGenreService(queries)
-	albumService := service.NewAlbumService(queries)
-	artistService := service.NewArtistService(queries)
+	albumService := service.NewAlbumService(queries, appURL, uploadDir)
+	artistService := service.NewArtistService(queries, appURL, uploadDir)
+	wsHub := ws.NewHub()
+	notificationService := service.NewNotificationService(queries, wsHub)
+
+	// Inject notification service into song and album services
+	songService.SetNotificationService(notificationService)
+	albumService.SetNotificationService(notificationService)
 
 	// 6. Initialize Handlers
+	wsHandler := handler.NewWSHandler(wsHub)
 	songHandler := handler.NewSongHandler(songService)
 	userHandler := handler.NewUserHandler(userService)
 	playlistHandler := handler.NewPlaylistHandler(playlistService)
@@ -58,7 +71,7 @@ func main() {
 	artistHandler := handler.NewArtistHandler(artistService)
 
 	// 7. Setup Router
-	router := handler.NewRouter(songHandler, albumHandler, genreHandler, userHandler, playlistHandler, artistHandler)
+	router := handler.NewRouter(songHandler, albumHandler, genreHandler, userHandler, playlistHandler, artistHandler, wsHandler)
 
 	// 8. Start Server
 	port := os.Getenv("PORT")

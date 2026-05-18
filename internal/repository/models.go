@@ -26,9 +26,24 @@ type Artist struct {
 	CreatedAt pgtype.Timestamptz
 }
 
+type Follow struct {
+	FollowerID string
+	ArtistID   string
+	CreatedAt  pgtype.Timestamptz
+}
+
 type Genre struct {
 	ID   string
 	Name string
+}
+
+type Notification struct {
+	ID        string
+	UserID    string
+	Title     string
+	Message   string
+	IsRead    pgtype.Bool
+	CreatedAt pgtype.Timestamptz
 }
 
 type Playlist struct {
@@ -50,6 +65,7 @@ type Song struct {
 	Name            string
 	DurationSeconds float64
 	AudioUrl        string
+	CoverUrl        pgtype.Text
 	AlbumID         string
 	GenreID         pgtype.Text
 	CreatedAt       pgtype.Timestamptz
