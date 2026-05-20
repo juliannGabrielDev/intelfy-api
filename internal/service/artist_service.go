@@ -45,6 +45,14 @@ func (s *ArtistService) CreateArtist(ctx context.Context, req dto.CreateArtistRe
 		return dto.ArtistResponse{}, err
 	}
 
+	_, err = s.repo.UpdateUserRole(ctx, repository.UpdateUserRoleParams{
+		ID:   req.UserID,
+		Role: pgtype.Text{String: dto.RoleArtist, Valid: true},
+	})
+	if err != nil {
+		return dto.ArtistResponse{}, err
+	}
+
 	return s.mapToArtistResponse(artist), nil
 }
 

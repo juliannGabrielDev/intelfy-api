@@ -23,25 +23,32 @@ func NewSongHandler(s *service.SongService) *SongHandler {
 	return &SongHandler{service: s}
 }
 
+// CreateSong maneja la creación de una nueva canción. Recibe el archivo de audio,
+// la portada opcional y los metadatos de la canción. Guarda los archivos en el servidor
+// y retorna la canción creada.
 func (h *SongHandler) CreateSong(w http.ResponseWriter, r *http.Request) {
+	// Parsea el formulario multipart con un límite de 50MB
 	if err := r.ParseMultipartForm(50 << 20); err != nil { // 50MB
 		render.Error(w, http.StatusBadRequest, "Failed to parse multipart form")
 		return
 	}
 
+	// Extrae los valores del formulario: nombre, duración, ID del álbum e ID del género
 	name := r.FormValue("name")
 	durationStr := r.FormValue("duration")
 	albumID := r.FormValue("album_id")
 	genreID := r.FormValue("genre_id")
 
+	// Intenta parsear la duración como formato de duración de Go (ej: "1h30m")
 	duration, _ := time.ParseDuration(durationStr)
 	if duration <= 0 {
-		// fallback if it's just seconds
+		// Fallback: si no es un formato de duración válido, intenta parsearla como segundos en float
 		if s, err := strconv.ParseFloat(durationStr, 64); err == nil {
 			duration = time.Duration(s * float64(time.Second))
 		}
 	}
 
+	// Crea el DTO con los datos de la canción
 	req := dto.CreateSongRequest{
 		Name:     name,
 		Duration: dto.SongDuration{Duration: duration},
@@ -49,7 +56,7 @@ func (h *SongHandler) CreateSong(w http.ResponseWriter, r *http.Request) {
 		GenreID:  genreID,
 	}
 
-	// Handle Audio File
+	// Obtiene y valida el archivo de audio (requerido)
 	audioFile, audioHeader, err := r.FormFile("audio")
 	if err != nil {
 		render.Error(w, http.StatusBadRequest, "Audio file is required")
@@ -57,17 +64,19 @@ func (h *SongHandler) CreateSong(w http.ResponseWriter, r *http.Request) {
 	}
 	defer audioFile.Close()
 
+	// Guarda el archivo de audio en el directorio songs/audio
 	audioPath, err := h.saveFile(audioFile, "songs/audio", audioHeader.Filename)
 	if err != nil {
 		render.Error(w, http.StatusInternalServerError, "Failed to save audio file")
 		return
 	}
 
-	// Handle Cover File (Optional)
+	// Obtiene y valida el archivo de portada (opcional)
 	var coverPath string
 	coverFile, coverHeader, err := r.FormFile("cover")
 	if err == nil {
 		defer coverFile.Close()
+		// Guarda el archivo de portada en el directorio songs/covers
 		coverPath, err = h.saveFile(coverFile, "songs/covers", coverHeader.Filename)
 		if err != nil {
 			render.Error(w, http.StatusInternalServerError, "Failed to save cover file")
@@ -75,12 +84,14 @@ func (h *SongHandler) CreateSong(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Llama al servicio para crear la canción con los datos y rutas de archivos
 	song, err := h.service.CreateSong(r.Context(), req, audioPath, coverPath)
 	if err != nil {
 		render.Error(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
+	// Retorna la canción creada con estado HTTP 201 (Created)
 	render.JSON(w, http.StatusCreated, song)
 }
 

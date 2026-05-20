@@ -58,7 +58,7 @@ func main() {
 	notificationService := service.NewNotificationService(queries, wsHub)
 
 	// Inject notification service into song and album services
-	songService.SetNotificationService(notificationService)
+	// songService.SetNotificationService(notificationService)
 	albumService.SetNotificationService(notificationService)
 
 	// 6. Initialize Handlers

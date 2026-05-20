@@ -27,3 +27,9 @@ UPDATE users
 SET username = $2, email = $3, password_hash = $4, role = $5
 WHERE id = $1
 RETURNING id, username, email, role, created_at;
+
+-- name: UpdateUserRole :one
+UPDATE users
+SET role = $2
+WHERE id = $1
+RETURNING id, username, email, role, created_at;
